@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'application'
+}
+
+group 'example'
+version '1.0.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation 'org.testcontainers:testcontainers:1.17.6'
+    testImplementation 'org.testcontainers:junit-jupiter:1.17.6'
+}
+
+application {
+    mainClass = 'example.start.Main'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.named('test') {
+    dependsOn 'assemble'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'example.start.Main'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
