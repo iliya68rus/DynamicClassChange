@@ -51,9 +51,12 @@ public class DynamicLoader {
             throw new IllegalStateException("System Java Compiler not available. Are you running with JDK instead of JRE?");
         }
 
+        long s = System.currentTimeMillis();
         int compilationResult = compiler.run(null, null, null,
                 rootDir + sourceFilePath,
                 "-d", rootDir + OUTPUT_DIR);
+        long e = System.currentTimeMillis();
+        System.out.println("Time compile: " + (e - s) + "ms");
 
         if (compilationResult != 0) {
             throw new RuntimeException("Compilation failed with result code: " + compilationResult);

@@ -1,11 +1,8 @@
 package example;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.MountableFile;
@@ -13,14 +10,24 @@ import org.testcontainers.utility.MountableFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
-@Disabled
 public class DynamicAppTest {
+
+//    @Container
+//    private static final KafkaContainer kafkaContainer = new KafkaContainer(
+//            DockerImageName.parse("confluentinc/cp-kafka:7.3.0"));
+
+    @Container
+    private GenericContainer<?> appContainer = new GenericContainer<>("openjdk:17")
+            .withCopyFileToContainer(
+                    MountableFile.forHostPath("build/libs/DynamicClassChange-1.0.0-SNAPSHOT.jar"),
+                    "/opt/app.jar"
+            )
+            .withCommand("tail", "-f", "/dev/null"); // Чтобы контейнер не завершался
 
 //    @Container
 //    public GenericContainer<?> appContainer = new GenericContainer<>("openjdk:17-jdk")
@@ -34,13 +41,35 @@ public class DynamicAppTest {
 //            .waitingFor(Wait.forLogMessage(".*Application started.*", 1))
 //            .withStartupTimeout(Duration.ofMinutes(1));
 
-    @Container
-    public GenericContainer<?> appContainer = new GenericContainer<>(
-            new ImageFromDockerfile()
-//                    .withDockerfile(Paths.get("src/test/docker/Dockerfile"))
-                    .withDockerfile(Paths.get("Dockerfile"))
-    )
-            .waitingFor(Wait.forLogMessage(".*Application started.*", 1));
+//    @Container
+//    public GenericContainer<?> appContainer = new GenericContainer<>(
+//            new ImageFromDockerfile()
+////                    .withDockerfile(Paths.get("src/test/docker/Dockerfile"))
+//                    .withDockerfile(Paths.get("Dockerfile2"))
+//    )
+//            .waitingFor(Wait.forLogMessage(".*Application started.*", 1))
+//            .withStartupTimeout(Duration.ofMinutes(5));;
+
+    @Test
+    void test123() throws IOException, InterruptedException {
+        String initialContent = """
+                package example;
+                
+                public class DynamicClass implements DynamicInterface {
+                    @Override
+                    public String getValue() {
+                        return "INITIAL_VALUE";
+                    }
+                }
+                """;
+        var res1 = appContainer.execInContainer("echo", initialContent, "> /opt/", "DynamicClass.java");
+
+        var res2 = appContainer.execInContainer(
+                "java", "-jar", "/opt/app.jar", "/opt/",
+                "--input", "/opt/appLog.log"
+        );
+        System.out.println(res2.getStdout());
+    }
 
     @Test
     void testDynamicClassChange() throws IOException {
